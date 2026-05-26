@@ -1,3 +1,21 @@
+# Contents
+
+- [Proxmox CPU Setup for Nested Virtualization](#proxmox-cpu-setup-for-nested-virtualization)
+    - [Part 1 — Host Preparation](#part-1--host-preparation)
+        - [AMD (Ryzen / EPYC)](#amd-ryzen--epyc)
+        - [Intel (Core / Xeon)](#intel-core--xeon)
+    - [Part 2 — Web UI CPU Tab](#part-2--web-ui-cpu-tab)
+        - [Common Settings](#common-settings-both-platforms)
+        - [CPU Type — AMD](#cpu-type--amd)
+        - [CPU Type — Intel](#cpu-type--intel)
+        - [Extra CPU Flags](#extra-cpu-flags)
+    - [Part 3 — Memory](#part-3--memory-required-alongside-cpu-flags)
+    - [Part 4 — Verifying the Guest Sees Nested Virtualization](#part-4--verifying-the-guest-sees-nested-virtualization)
+        - [From Windows (inside the VM)](#from-windows-inside-the-vm)
+        - [From the Proxmox Host](#from-the-proxmox-host-while-vm-is-running)
+    - [Quick Reference](#quick-reference)
+- [Create Scheduled Job for Rename Script](#create-scheduled-job-for-rename-script)
+
 # Proxmox CPU Setup for Nested Virtualization
 
 Covers host preparation, web UI configuration, and CPU pinning for both AMD and Intel platforms.
