@@ -2,13 +2,13 @@
 
 Covers host preparation, web UI configuration, and CPU pinning for both AMD and Intel platforms.
 
----
+
 
 ## Part 1 — Host Preparation
 
 Before creating the VM, confirm nested virtualization is enabled at the kernel level. Without this, the CPU flags you set in the VM have no effect.
 
----
+
 
 ### AMD (Ryzen / EPYC)
 
@@ -27,7 +27,7 @@ modprobe -r kvm_amd && modprobe kvm_amd
 
 Verify again — must return `1` before continuing.
 
----
+
 
 ### Intel (Core / Xeon)
 
@@ -49,7 +49,7 @@ Verify again — must return `1` before continuing.
 > **Note:** Some Intel systems also benefit from enabling unrestricted guest mode:
 > `echo "options kvm_intel nested=1 unrestricted_guest=1" > /etc/modprobe.d/kvm-intel.conf`
 
----
+
 
 ## Part 2 — Web UI CPU Tab
 
@@ -63,7 +63,7 @@ When creating or editing a VM, go to the **CPU** tab.
 | Cores | Number of cores to assign (e.g. `8`) |
 | NUMA | ❌ Disabled (unless you have multiple physical CPUs) |
 
----
+
 
 ### CPU Type — AMD
 
@@ -71,7 +71,7 @@ Set **Type** to `host`.
 
 Using `host` is required on AMD for nested virtualization — it passes the physical SVM flag through to the guest. Generic types like `kvm64` or `x86-64-v2` do not expose SVM and nested virt will silently fail.
 
----
+
 
 ### CPU Type — Intel
 
@@ -79,7 +79,7 @@ Set **Type** to `host`.
 
 Same reasoning as AMD — `host` passes the VMX flag through. If you need live migration between Intel hosts of different generations, use `max` instead, which exposes the most compatible set of features the host supports.
 
----
+
 
 ### Extra CPU Flags
 
