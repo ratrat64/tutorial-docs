@@ -122,7 +122,6 @@ cpu: host,flags=+nested-virt;+ibpb;+ibrs;+ssbd;+pdpe1gb;+aes;+hv-evmcs
 
 > `hv-evmcs` is an Intel-only optimisation. It reduces the overhead of nested hypervisor VM-exits, which noticeably improves WSL2 and Hyper-V performance inside the guest. There is no AMD equivalent.
 
----
 
 ## Part 3 — Memory (required alongside CPU flags)
 
@@ -132,79 +131,8 @@ Go to the **Memory** tab and **disable ballooning** (set minimum to `0` or unche
 
 The balloon driver competes with Hyper-V for memory management control. With `+nested-virt` enabled and WSL2 or Hyper-V running inside the guest, a running balloon driver causes instability and memory pressure crashes.
 
----
 
-## Part 4 — CPU Pinning (post-creation, shell only)
-
-The web UI does not expose CPU pinning. This is done from the Proxmox host shell after the VM is created.
-
-Pinning matters most on multi-CCD AMD processors (Ryzen 7000/9000, Threadripper) where vCPUs scattered across dies incur cross-CCD latency and share no L3 cache.
-
-### Check your topology first
-
-```bash
-apt install hwloc -y
-lstopo --of console
-```
-
-Look for `Die` blocks. Each die is a separate CCD with its own L3 cache. Note the physical CPU (`P#`) numbers within each die.
-
----
-
-### AMD — Ryzen 9 7950X example
-
-The 7950X has two CCDs:
-
-| CCD | Physical cores | HT siblings |
-|---|---|---|
-| Die 0 | P#0–7 | P#16–23 |
-| Die 1 | P#8–15 | P#24–31 |
-
-Pin an 8-core VM to Die 0:
-
-```bash
-qm set <vmid> --cpuset 0-7,16-23
-```
-
-Pin to Die 1 instead (e.g. for a second VM):
-
-```bash
-qm set <vmid> --cpuset 8-15,24-31
-```
-
-This keeps all vCPUs within the same 32 MB L3 cache and eliminates cross-CCD latency.
-
----
-
-### Intel — example (single-die)
-
-Most desktop Intel CPUs (Core i-series) are single-die, so cross-die latency is not a concern. Pinning is still useful to prevent the host scheduler from moving vCPUs to efficiency cores (E-cores) on hybrid architectures (Alder Lake / Raptor Lake and newer).
-
-List cores by type:
-
-```bash
-lstopo --of console | grep -E "Core|PU"
-```
-
-On a Raptor Lake system, P-cores appear first in the topology. Pin an 8-core VM to the first 8 P-cores and their HT siblings:
-
-```bash
-qm set <vmid> --cpuset 0-7,16-23
-```
-
-Adjust the range to match what `lstopo` shows for your specific CPU.
-
----
-
-### Verify pinning was applied
-
-```bash
-grep cpuset /etc/pve/qemu-server/<vmid>.conf
-```
-
----
-
-## Part 5 — Verifying the guest sees nested virtualization
+## Part 4 — Verifying the guest sees nested virtualization
 
 ### From Windows (inside the VM)
 
@@ -231,7 +159,7 @@ ps aux | grep qemu | grep -o 'hv_[a-z_]*'
 Expected output includes: `hv_relaxed`, `hv_vapic`, `hv_spinlocks`, `hv_time`.  
 On Intel with `hv-evmcs`: also `hv_evmcs`.
 
----
+
 
 ## Quick Reference
 
@@ -244,3 +172,26 @@ On Intel with `hv-evmcs`: also `hv_evmcs`.
 | Spectre v4 flags | `+virt-ssbd;+amd-ssbd` | `+ssbd;+ibrs` |
 | Intel-only flag | — | `+hv-evmcs` |
 | Multi-CCD pinning | Required on Ryzen 7000+ / Threadripper | Rarely needed; useful on hybrid (P/E-core) CPUs |
+
+# Create scheduled job for **rename script**
+
+Run this in PowerShell as Administrator on your template, before converting it to a template in Proxmox:
+
+```Powershell
+powershell$action = New-ScheduledTaskAction -Execute "PowerShell.exe" `
+    -Argument "-ExecutionPolicy Bypass -File C:\Scripts\FirstBootRename.ps1"
+
+$trigger = New-ScheduledTaskTrigger -AtStartup
+
+$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -RunOnlyIfNetworkAvailable:$false
+
+$principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -RunLevel Highest
+
+Register-ScheduledTask `
+    -TaskName "FirstBootRename" `
+    -Action $action `
+    -Trigger $trigger `
+    -Settings $settings `
+    -Principal $principal `
+    -Description "Renames the VM on first boot, then deletes itself"
+```
